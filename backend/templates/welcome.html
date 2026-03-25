@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>StudentManager Backend</title>
+    <style>
+      :root {
+        --bg: #f6efe7;
+        --bg-accent: #e6f1ee;
+        --card: rgba(255, 252, 247, 0.92);
+        --border: rgba(20, 38, 44, 0.14);
+        --text: #1d2a2f;
+        --muted: #5d6c70;
+        --primary: #0b6e69;
+        --primary-dark: #084f4c;
+        --shadow: 0 24px 80px rgba(31, 50, 56, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(11, 110, 105, 0.16), transparent 32%),
+          radial-gradient(circle at top right, rgba(217, 119, 87, 0.18), transparent 24%),
+          linear-gradient(180deg, var(--bg) 0%, var(--bg-accent) 100%);
+      }
+
+      .shell {
+        width: min(1100px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 2rem 0 3rem;
+      }
+
+      .hero,
+      .grid-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+
+      .hero {
+        padding: 2rem;
+        display: grid;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      h1,
+      h2 {
+        font-family: "Palatino Linotype", Georgia, serif;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 5vw, 4.6rem);
+        line-height: 0.95;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1.25rem;
+      }
+
+      .grid-card {
+        padding: 1.4rem;
+        display: grid;
+        gap: 1rem;
+      }
+
+      .link-list {
+        display: grid;
+        gap: 0.75rem;
+      }
+
+      a {
+        color: var(--primary-dark);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .pill {
+        display: inline-block;
+        width: fit-content;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(11, 110, 105, 0.1);
+        color: var(--primary-dark);
+        font-weight: 700;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, monospace;
+        background: rgba(8, 79, 76, 0.06);
+        padding: 0.12rem 0.35rem;
+        border-radius: 8px;
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <span class="eyebrow">StudentManager</span>
+        <h1>Welcome to the backend home page.</h1>
+        <p>
+          This Django server powers authentication, admin access, and the student
+          REST API for the StudentManager frontend.
+        </p>
+        <span class="pill">Running at http://127.0.0.1:8000/</span>
+      </section>
+
+      <section class="grid">
+        <article class="grid-card">
+          <h2>Frontend</h2>
+          <p>Open the Next.js interface to register, log in, and manage students.</p>
+          <div class="link-list">
+            <a href="http://127.0.0.1:3000/register">Register</a>
+            <a href="http://127.0.0.1:3000/login">Login</a>
+            <a href="http://127.0.0.1:3000/students">My Students</a>
+            <a href="http://127.0.0.1:3000/students/all">All Students</a>
+          </div>
+        </article>
+
+        <article class="grid-card">
+          <h2>Admin</h2>
+          <p>Use Django Admin for direct management through the built-in backend UI.</p>
+          <div class="link-list">
+            <a href="/admin/">Open Admin Panel</a>
+          </div>
+        </article>
+
+        <article class="grid-card">
+          <h2>API Links</h2>
+          <p>Useful endpoints for testing the backend directly with Postman or curl.</p>
+          <div class="link-list">
+            <a href="/api/students/">My Students API</a>
+            <a href="/api/students/all/">All Students API</a>
+            <a href="/api/auth/me/">Current User</a>
+            <a href="/api/auth/login/">JWT Login Endpoint</a>
+            <a href="/api/auth/register/">Register Endpoint</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="hero" style="margin-top: 1.5rem;">
+        <h2>Quick Start</h2>
+        <p>
+          1. Start Django with <code>python backend/manage.py runserver</code>.
+          2. Start Next.js with <code>npm run dev</code> inside <code>frontend/</code>.
+          3. Register a user or create a superuser and sign in.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
