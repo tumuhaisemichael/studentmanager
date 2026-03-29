@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Student
+from .models import Course, Enrollment, Student
 
 
 @admin.register(Student)
@@ -8,7 +8,6 @@ class StudentAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "age",
-        "subject",
         "phone_number",
         "class_name",
         "created_by",
@@ -16,9 +15,27 @@ class StudentAdmin(admin.ModelAdmin):
     )
     search_fields = (
         "name",
-        "subject",
         "phone_number",
         "class_name",
         "created_by__username",
     )
-    list_filter = ("subject", "class_name", "created_at")
+    list_filter = ("class_name", "created_at")
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ("title", "code", "created_by", "created_at")
+    search_fields = ("title", "code", "created_by__username")
+    list_filter = ("created_at",)
+
+
+@admin.register(Enrollment)
+class EnrollmentAdmin(admin.ModelAdmin):
+    list_display = ("student", "course", "created_by", "enrolled_at")
+    search_fields = (
+        "student__name",
+        "course__title",
+        "course__code",
+        "created_by__username",
+    )
+    list_filter = ("enrolled_at",)

@@ -65,7 +65,7 @@ export default function LoginPage() {
             <div className="auth-feature-list">
               <article className="auth-feature-card">
                 <strong>Track every record</strong>
-                <p>View all students, comments, classes, and subjects in one place.</p>
+                <p>View all students, comments, classes, and courses in one place.</p>
               </article>
               <article className="auth-feature-card">
                 <strong>Designed for daily use</strong>

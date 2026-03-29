@@ -5,8 +5,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Student
-from .serializers import RegisterSerializer, StudentSerializer
+from .models import Course, Enrollment, Student
+from .serializers import (
+    CourseSerializer,
+    EnrollmentSerializer,
+    RegisterSerializer,
+    StudentSerializer,
+)
 
 
 def welcome_page(request):
@@ -32,6 +37,35 @@ class StudentViewSet(viewsets.ModelViewSet):
     def all_students(self, request):
         serializer = self.get_serializer(self.get_queryset(), many=True)
         return Response(serializer.data)
+
+
+class CourseViewSet(viewsets.ModelViewSet):
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Course.objects.select_related("created_by").filter(
+            created_by=self.request.user
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+class EnrollmentViewSet(viewsets.ModelViewSet):
+    serializer_class = EnrollmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Enrollment.objects.select_related("student", "course", "created_by")
+            .filter(created_by=self.request.user)
+            .order_by("-enrolled_at")
+        )
+
+    def perform_create(self, serializer):
+        # We stamp relation ownership so listing and permissions stay scoped.
+        serializer.save(created_by=self.request.user)
 
 
 class CurrentUserView(APIView):

@@ -84,7 +84,7 @@ export default function RegisterPage() {
             <div className="auth-feature-list">
               <article className="auth-feature-card">
                 <strong>Create records quickly</strong>
-                <p>Add student details, subjects, classes, and comments in one flow.</p>
+                <p>Add student details, classes, and comments in one flow.</p>
               </article>
               <article className="auth-feature-card">
                 <strong>Stay organized</strong>

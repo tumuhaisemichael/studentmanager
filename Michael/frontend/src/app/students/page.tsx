@@ -10,7 +10,6 @@ type Student = {
   id: number;
   name: string;
   age: number;
-  subject: string;
   phone_number: string;
   class_name: string;
   comment: string;
@@ -24,10 +23,23 @@ type CurrentUser = {
   email: string;
 };
 
+type Course = {
+  id: number;
+  title: string;
+  code: string;
+};
+
+type Enrollment = {
+  id: number;
+  student: number;
+  course: number;
+  course_title?: string;
+  course_code?: string;
+};
+
 type StudentFormState = {
   name: string;
   age: string;
-  subject: string;
   phone_number: string;
   class_name: string;
   comment: string;
@@ -38,7 +50,6 @@ type DashboardTab = "form" | "records" | "all";
 const initialFormState: StudentFormState = {
   name: "",
   age: "",
-  subject: "",
   phone_number: "",
   class_name: "",
   comment: "",
@@ -50,6 +61,9 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudentCourses, setSelectedStudentCourses] = useState<Course[]>([]);
+  const [isRelationsLoading, setIsRelationsLoading] = useState(false);
+  const [relationsError, setRelationsError] = useState("");
   const [form, setForm] = useState<StudentFormState>(initialFormState);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("form");
@@ -177,7 +191,6 @@ export default function StudentsPage() {
     const payload = {
       name: form.name.trim(),
       age: Number(form.age),
-      subject: form.subject.trim(),
       phone_number: form.phone_number.trim(),
       class_name: form.class_name.trim(),
       comment: form.comment.trim(),
@@ -242,7 +255,7 @@ export default function StudentsPage() {
       }
 
       if (selectedStudent?.id === studentId) {
-        setSelectedStudent(null);
+        closeStudentDetails();
       }
 
       window.dispatchEvent(new Event("student-records-changed"));
@@ -256,7 +269,6 @@ export default function StudentsPage() {
     setForm({
       name: student.name,
       age: String(student.age),
-      subject: student.subject,
       phone_number: student.phone_number,
       class_name: student.class_name,
       comment: student.comment,
@@ -275,12 +287,57 @@ export default function StudentsPage() {
     setIsMenuOpen(false);
   }
 
+  function closeStudentDetails() {
+    setSelectedStudent(null);
+    setSelectedStudentCourses([]);
+    setRelationsError("");
+    setIsRelationsLoading(false);
+  }
+
+  async function openStudentDetails(student: Student) {
+    setSelectedStudent(student);
+    setSelectedStudentCourses([]);
+    setRelationsError("");
+    setIsRelationsLoading(true);
+
+    try {
+      const [enrollments, courses] = await Promise.all([
+        apiRequest<Enrollment[]>("/api/enrollments/"),
+        apiRequest<Course[]>("/api/courses/"),
+      ]);
+
+      // We map course rows by id so each enrollment's `course` foreign key can be
+      // resolved quickly into full course details for display.
+      const coursesById = new Map(courses.map((course) => [course.id, course]));
+
+      // Enrollment rows carry the relation keys: student_id and course_id.
+      // Filtering by student id gives only this student's related courses.
+      const relatedCourses = enrollments
+        .filter((enrollment) => enrollment.student === student.id)
+        .map((enrollment) => coursesById.get(enrollment.course))
+        .filter((course): course is Course => Boolean(course));
+
+      setSelectedStudentCourses(relatedCourses);
+    } catch (relationLoadError) {
+      const message = formatErrorMessage(relationLoadError);
+
+      if (message.toLowerCase().includes("401")) {
+        clearTokens();
+        router.replace("/login");
+        return;
+      }
+
+      setRelationsError(message);
+    } finally {
+      setIsRelationsLoading(false);
+    }
+  }
+
   function exportStudentsToCsv() {
     const rows = [
       [
         "Name",
         "Age",
-        "Subject",
         "Phone Number",
         "Class",
         "Comment",
@@ -290,7 +347,6 @@ export default function StudentsPage() {
       ...students.map((student) => [
         student.name,
         String(student.age),
-        student.subject,
         student.phone_number,
         student.class_name,
         student.comment,
@@ -327,7 +383,6 @@ export default function StudentsPage() {
 
       return [
         student.name,
-        student.subject,
         student.class_name,
         student.comment,
         student.created_by_username ?? "",
@@ -341,10 +396,6 @@ export default function StudentsPage() {
         return firstStudent.name.localeCompare(secondStudent.name);
       }
 
-      if (sortBy === "subject") {
-        return firstStudent.subject.localeCompare(secondStudent.subject);
-      }
-
       return (
         new Date(secondStudent.created_at).getTime() -
         new Date(firstStudent.created_at).getTime()
@@ -356,11 +407,15 @@ export default function StudentsPage() {
   const totalClasses = new Set(
     students.map((student) => student.class_name).filter(Boolean),
   ).size;
-  const totalSubjects = new Set(students.map((student) => student.subject)).size;
+  const totalStudentsWithComments = students.filter((student) =>
+    student.comment.trim(),
+  ).length;
   const totalAllClasses = new Set(
     allStudents.map((student) => student.class_name).filter(Boolean),
   ).size;
-  const totalAllSubjects = new Set(allStudents.map((student) => student.subject)).size;
+  const totalAllStudentsWithComments = allStudents.filter((student) =>
+    student.comment.trim(),
+  ).length;
 
   return (
     <main className="teacher-dashboard-shell">
@@ -437,6 +492,20 @@ export default function StudentsPage() {
             >
               View all students
             </button>
+            <button
+              className="teacher-nav-item"
+              onClick={() => router.push("/students/courses")}
+              type="button"
+            >
+              Courses
+            </button>
+            <button
+              className="teacher-nav-item"
+              onClick={() => router.push("/students/enrollments")}
+              type="button"
+            >
+              Enrollments
+            </button>
             <button className="teacher-nav-item" onClick={handleLogout} type="button">
               Logout
             </button>
@@ -476,8 +545,8 @@ export default function StudentsPage() {
                   <strong>{totalClasses}</strong>
                 </article>
                 <article className="teacher-stat-card">
-                  <span>Total subjects</span>
-                  <strong>{totalSubjects}</strong>
+                  <span>With comments</span>
+                  <strong>{totalStudentsWithComments}</strong>
                 </article>
               </section>
 
@@ -528,22 +597,6 @@ export default function StudentsPage() {
                   <div className="teacher-form-section">
                     <span className="form-kicker">Academic Details</span>
                     <div className="teacher-form-grid">
-                      <label>
-                        Subject
-                        <input
-                          className="input"
-                          onChange={(event) =>
-                            setForm((currentForm) => ({
-                              ...currentForm,
-                              subject: event.target.value,
-                            }))
-                          }
-                          placeholder="Computer Science"
-                          required
-                          value={form.subject}
-                        />
-                      </label>
-
                       <label>
                         Phone Number
                         <input
@@ -641,8 +694,8 @@ export default function StudentsPage() {
                   <strong>{totalClasses}</strong>
                 </article>
                 <article className="teacher-stat-card">
-                  <span>Total subjects</span>
-                  <strong>{totalSubjects}</strong>
+                  <span>With comments</span>
+                  <strong>{totalStudentsWithComments}</strong>
                 </article>
               </section>
 
@@ -669,7 +722,7 @@ export default function StudentsPage() {
                       <div className="teacher-record-copy">
                         <div className="student-meta">
                           <h3>{student.name}</h3>
-                          <span className="badge">{student.subject}</span>
+                          <span className="badge">{student.class_name || "Student"}</span>
                         </div>
                         <div className="student-chip-row">
                           <span className="meta-chip">Created by me</span>
@@ -689,7 +742,7 @@ export default function StudentsPage() {
                       <div className="button-row">
                         <button
                           className="button button-secondary"
-                          onClick={() => setSelectedStudent(student)}
+                          onClick={() => void openStudentDetails(student)}
                           type="button"
                         >
                           View details
@@ -728,8 +781,8 @@ export default function StudentsPage() {
                   <strong>{totalAllClasses}</strong>
                 </article>
                 <article className="teacher-stat-card">
-                  <span>Total subjects</span>
-                  <strong>{totalAllSubjects}</strong>
+                  <span>With comments</span>
+                  <strong>{totalAllStudentsWithComments}</strong>
                 </article>
               </section>
 
@@ -757,7 +810,7 @@ export default function StudentsPage() {
                   <input
                     className="input"
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Search by student, subject, class, or teacher"
+                    placeholder="Search by student, class, note, or teacher"
                     value={searchTerm}
                   />
                 </label>
@@ -771,7 +824,6 @@ export default function StudentsPage() {
                   >
                     <option value="latest">Latest added</option>
                     <option value="name">Student name</option>
-                    <option value="subject">Subject</option>
                   </select>
                 </label>
 
@@ -806,12 +858,12 @@ export default function StudentsPage() {
                   <article className="directory-card" key={student.id}>
                     <div className={`directory-card-banner accent-${(index % 6) + 1}`}>
                       <span className="directory-avatar">
-                        {student.subject.slice(0, 1).toUpperCase()}
+                        {student.name.slice(0, 1).toUpperCase()}
                       </span>
                       <button
                         aria-label={`Open details for ${student.name}`}
                         className="directory-dots"
-                        onClick={() => setSelectedStudent(student)}
+                        onClick={() => void openStudentDetails(student)}
                         type="button"
                       >
                         •••
@@ -819,7 +871,7 @@ export default function StudentsPage() {
                     </div>
 
                     <div className="directory-card-body">
-                      <h3>{student.subject}</h3>
+                      <h3>{student.class_name || "Student profile"}</h3>
                       <p className="directory-student-name">{student.name}</p>
                       <div className="student-chip-row">
                         <span className="meta-chip">
@@ -851,14 +903,14 @@ export default function StudentsPage() {
                       <div className="directory-card-footer">
                         <button
                           className="directory-link-button"
-                          onClick={() => setSelectedStudent(student)}
+                          onClick={() => void openStudentDetails(student)}
                           type="button"
                         >
                           View Student
                         </button>
                         <button
                           className="button button-secondary directory-action"
-                          onClick={() => setSelectedStudent(student)}
+                          onClick={() => void openStudentDetails(student)}
                           type="button"
                         >
                           Open Card
@@ -876,7 +928,7 @@ export default function StudentsPage() {
       {selectedStudent ? (
         <div
           className="overlay"
-          onClick={() => setSelectedStudent(null)}
+          onClick={closeStudentDetails}
           role="presentation"
         >
           <section
@@ -894,7 +946,7 @@ export default function StudentsPage() {
               <button
                 aria-label="Close student details"
                 className="button button-secondary"
-                onClick={() => setSelectedStudent(null)}
+                onClick={closeStudentDetails}
                 type="button"
               >
                 Close
@@ -902,10 +954,6 @@ export default function StudentsPage() {
             </div>
 
             <div className="overlay-grid">
-              <div className="detail-item">
-                <span>Subject</span>
-                <strong>{selectedStudent.subject}</strong>
-              </div>
               <div className="detail-item">
                 <span>Age</span>
                 <strong>{selectedStudent.age}</strong>
@@ -929,6 +977,27 @@ export default function StudentsPage() {
               <div className="detail-item detail-item-wide">
                 <span>Created at</span>
                 <strong>{new Date(selectedStudent.created_at).toLocaleString()}</strong>
+              </div>
+              <div className="detail-item detail-item-wide">
+                <span>Related courses (via enrollments)</span>
+                {isRelationsLoading ? <strong>Loading related courses...</strong> : null}
+                {!isRelationsLoading && relationsError ? (
+                  <strong>{relationsError}</strong>
+                ) : null}
+                {!isRelationsLoading &&
+                !relationsError &&
+                selectedStudentCourses.length === 0 ? (
+                  <strong>No related courses yet.</strong>
+                ) : null}
+                {!isRelationsLoading &&
+                !relationsError &&
+                selectedStudentCourses.length > 0 ? (
+                  <strong>
+                    {selectedStudentCourses
+                      .map((course) => `${course.code} - ${course.title}`)
+                      .join(", ")}
+                  </strong>
+                ) : null}
               </div>
             </div>
           </section>

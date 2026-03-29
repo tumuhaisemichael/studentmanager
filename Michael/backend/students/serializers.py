@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import Student
+from .models import Course, Enrollment, Student
 
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -12,11 +12,6 @@ class StudentSerializer(serializers.ModelSerializer):
     def validate_name(self, value):
         if not value.strip():
             raise serializers.ValidationError("Student name is required.")
-        return value
-
-    def validate_subject(self, value):
-        if not value.strip():
-            raise serializers.ValidationError("Subject is required.")
         return value
 
     def validate_age(self, value):
@@ -38,7 +33,6 @@ class StudentSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "age",
-            "subject",
             "phone_number",
             "class_name",
             "comment",
@@ -47,6 +41,83 @@ class StudentSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ["id", "created_at", "created_by", "created_by_username"]
+
+
+class CourseSerializer(serializers.ModelSerializer):
+    created_by_username = serializers.CharField(
+        source="created_by.username", read_only=True
+    )
+
+    def validate_title(self, value):
+        cleaned_value = value.strip()
+        if not cleaned_value:
+            raise serializers.ValidationError("Course title is required.")
+        return cleaned_value
+
+    def validate_code(self, value):
+        cleaned_value = value.strip().upper()
+        if not cleaned_value:
+            raise serializers.ValidationError("Course code is required.")
+        return cleaned_value
+
+    class Meta:
+        model = Course
+        fields = [
+            "id",
+            "title",
+            "code",
+            "description",
+            "created_by",
+            "created_by_username",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at", "created_by", "created_by_username"]
+
+
+class EnrollmentSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.name", read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    course_code = serializers.CharField(source="course.code", read_only=True)
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        student = attrs.get("student")
+        course = attrs.get("course")
+
+        # Enrollment should only join records owned by the authenticated user.
+        if user and student and student.created_by_id != user.id:
+            raise serializers.ValidationError(
+                {"student": "You can only enroll your own students."}
+            )
+
+        if user and course and course.created_by_id != user.id:
+            raise serializers.ValidationError(
+                {"course": "You can only use your own courses."}
+            )
+
+        return attrs
+
+    class Meta:
+        model = Enrollment
+        fields = [
+            "id",
+            "student",
+            "course",
+            "student_name",
+            "course_title",
+            "course_code",
+            "created_by",
+            "enrolled_at",
+        ]
+        read_only_fields = [
+            "id",
+            "created_by",
+            "enrolled_at",
+            "student_name",
+            "course_title",
+            "course_code",
+        ]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
