@@ -83,17 +83,11 @@ class EnrollmentSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         student = attrs.get("student")
-        course = attrs.get("course")
 
-        # Enrollment should only join records owned by the authenticated user.
+        # Keep student ownership scoped to the authenticated user.
         if user and student and student.created_by_id != user.id:
             raise serializers.ValidationError(
                 {"student": "You can only enroll your own students."}
-            )
-
-        if user and course and course.created_by_id != user.id:
-            raise serializers.ValidationError(
-                {"course": "You can only use your own courses."}
             )
 
         return attrs

@@ -44,9 +44,8 @@ class CourseViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Course.objects.select_related("created_by").filter(
-            created_by=self.request.user
-        )
+        # Courses are shared across authenticated teachers.
+        return Course.objects.select_related("created_by").all()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
